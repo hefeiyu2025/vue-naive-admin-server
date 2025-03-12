@@ -9,11 +9,13 @@ import com.naiveadmin.server.entity.SysUser;
 import com.naiveadmin.server.entity.SysUserRole;
 import com.naiveadmin.server.mapper.SysUserMapper;
 import com.naiveadmin.server.mapper.SysUserRoleMapper;
+import com.naiveadmin.server.service.IFileService;
 import com.naiveadmin.server.service.ISysUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
@@ -29,139 +31,123 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
     private final SysUserRoleMapper userRoleMapper;
     private final PasswordEncoder passwordEncoder;
+    private final IFileService fileService;
 
     @Override
     public Page<SysUser> listUserPage(IPage<SysUser> page, SysUser user) {
-        Page<SysUser> resultPage = new Page<>();
-        Page<SysUser> pageParam = new Page<>(page.getCurrent(), page.getSize());
-        String keyword = user.getUsername();
-        IPage<SysUser> iPage = baseMapper.selectUserPage(pageParam, keyword);
-        resultPage.setRecords(iPage.getRecords());
-        resultPage.setTotal(iPage.getTotal());
-        return resultPage;
+        LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(user.getUsername())) {
+            wrapper.like(SysUser::getUsername, user.getUsername())
+                    .or()
+                    .like(SysUser::getNickname, user.getUsername());
+        }
+        wrapper.orderByDesc(SysUser::getCreateTime);
+        return this.page((Page<SysUser>) page, wrapper);
     }
 
     @Override
     public SysUser getUserByUsername(String username) {
-        return baseMapper.selectOne(new LambdaQueryWrapper<SysUser>()
-                .eq(SysUser::getUsername, username)
-                .eq(SysUser::getDeleted, false));
+        return this.getOne(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getUsername, username));
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean addUser(SysUser user) {
-        // 校验用户名唯一性
-        if (!checkUsernameUnique(user.getUsername(), null)) {
-            throw new ServiceException("用户名已存在");
-        }
-        // 校验手机号唯一性
-        if (user.getPhone() != null && !checkPhoneUnique(user.getPhone(), null)) {
-            throw new ServiceException("手机号已存在");
-        }
-        // 校验邮箱唯一性
-        if (user.getEmail() != null && !checkEmailUnique(user.getEmail(), null)) {
-            throw new ServiceException("邮箱已存在");
+        // 检查用户名是否已存在
+        if (this.getUserByUsername(user.getUsername()) != null) {
+            throw new RuntimeException("用户名已存在");
         }
 
+        // 设置默认值
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setCreateTime(LocalDateTime.now());
         user.setUpdateTime(LocalDateTime.now());
-        boolean result = save(user);
+        user.setStatus(true); // 默认启用
 
-        // 保存用户角色关联
-        if (user.getRoles() != null && !user.getRoles().isEmpty()) {
-            user.getRoles().forEach(role -> {
-                SysUserRole userRole = new SysUserRole();
-                userRole.setUserId(user.getId());
-                userRole.setRoleId(role.getId());
-                userRoleMapper.insert(userRole);
-            });
-        }
-        
-        return result;
+        return this.save(user);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateUser(SysUser user) {
-        // 校验用户名唯一性
-        if (!checkUsernameUnique(user.getUsername(), user.getId())) {
-            throw new ServiceException("用户名已存在");
-        }
-        // 校验手机号唯一性
-        if (user.getPhone() != null && !checkPhoneUnique(user.getPhone(), user.getId())) {
-            throw new ServiceException("手机号已存在");
-        }
-        // 校验邮箱唯一性
-        if (user.getEmail() != null && !checkEmailUnique(user.getEmail(), user.getId())) {
-            throw new ServiceException("邮箱已存在");
-        }
-
         user.setUpdateTime(LocalDateTime.now());
-        boolean result = updateById(user);
-
-        // 更新用户角色关联
-        if (user.getRoles() != null) {
-            // 删除原有角色关联
-            userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>()
-                    .eq(SysUserRole::getUserId, user.getId()));
-            // 添加新的角色关联
-            user.getRoles().forEach(role -> {
-                SysUserRole userRole = new SysUserRole();
-                userRole.setUserId(user.getId());
-                userRole.setRoleId(role.getId());
-                userRoleMapper.insert(userRole);
-            });
+        // 如果密码不为空，则加密
+        if (StringUtils.hasText(user.getPassword())) {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
         }
-        
-        return result;
+        return this.updateById(user);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteUserByIds(List<Long> ids) {
-        for (Long id : ids) {
-            // 删除用户角色关联
-            userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>()
-                    .eq(SysUserRole::getUserId, id));
-        }
-        // 删除用户
-        return removeByIds(ids);
+        return this.removeByIds(ids);
     }
 
     @Override
     public boolean resetPassword(SysUser user) {
-        SysUser updateUser = new SysUser();
-        updateUser.setId(user.getId());
-        updateUser.setPassword(passwordEncoder.encode(user.getPassword()));
-        updateUser.setUpdateTime(LocalDateTime.now());
-        return updateById(updateUser);
+        user.setPassword(passwordEncoder.encode("123456")); // 默认密码
+        user.setUpdateTime(LocalDateTime.now());
+        return this.updateById(user);
     }
 
     @Override
     public boolean updatePassword(SysUser user) {
-        SysUser existUser = getById(user.getId());
-        if (existUser == null) {
-            throw new ServiceException("用户不存在");
-        }
-        
-        // 假设前端传入的oldPassword存储在临时字段中
-        // 这里需要根据实际情况修改，可能需要在接口中添加额外参数
-        String oldPassword = "123456"; // 默认密码，实际应从请求中获取
-        if (!passwordEncoder.matches(oldPassword, existUser.getPassword())) {
-            throw new ServiceException("原密码错误");
-        }
-        
-        existUser.setPassword(passwordEncoder.encode(user.getPassword()));
-        existUser.setUpdateTime(LocalDateTime.now());
-        return updateById(existUser);
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setUpdateTime(LocalDateTime.now());
+        return this.updateById(user);
     }
 
     @Override
     public String uploadAvatar(MultipartFile file) {
-        // TODO: 实现文件上传逻辑
-        return "avatar/default.jpg"; // 返回默认头像路径
+        // 检查文件类型
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null) {
+            throw new ServiceException("文件名不能为空");
+        }
+        
+        String extension = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase();
+        if (!isValidImageExtension(extension)) {
+            throw new ServiceException("只支持jpg、jpeg、png、gif格式的图片");
+        }
+
+        // 上传文件
+        String avatarUrl = fileService.uploadFile(file, "avatar");
+
+        // 更新当前用户的头像URL
+        SysUser currentUser = getCurrentUser();
+        if (currentUser != null) {
+            // 删除旧头像
+            if (StringUtils.hasText(currentUser.getAvatar())) {
+                fileService.deleteFile(currentUser.getAvatar());
+            }
+            
+            // 更新新头像
+            currentUser.setAvatar(avatarUrl);
+            currentUser.setUpdateTime(LocalDateTime.now());
+            this.updateById(currentUser);
+        }
+
+        return avatarUrl;
+    }
+
+    /**
+     * 检查文件扩展名是否为有效的图片格式
+     */
+    private boolean isValidImageExtension(String extension) {
+        return "jpg".equals(extension) || 
+               "jpeg".equals(extension) || 
+               "png".equals(extension) || 
+               "gif".equals(extension);
+    }
+
+    /**
+     * 获取当前登录用户
+     * TODO: 实现获取当前登录用户的逻辑
+     */
+    private SysUser getCurrentUser() {
+        return null;
     }
 
     /**

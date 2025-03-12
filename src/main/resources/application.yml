@@ -2,6 +2,9 @@ server:
   port: 8080
   servlet:
     context-path: /api
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
 spring:
   application:
@@ -94,4 +97,9 @@ knife4j:
     enable-dynamic-parameter: false
     enable-debug: true
     enable-open-api: true
-    enable-group: true 
+    enable-group: true
+
+file:
+  upload:
+    path: /upload  # 文件上传根路径
+    url-prefix: /files  # 文件访问URL前缀 
