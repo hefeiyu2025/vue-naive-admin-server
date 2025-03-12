@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.naiveadmin.server.mapper.SysNotificationMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.naiveadmin.server.entity.SysNotification">
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="content" property="content"/>
+        <result column="type" property="type"/>
+        <result column="is_read" property="isRead"/>
+        <result column="create_time" property="createTime"/>
+        <result column="link" property="link"/>
+        <result column="sender" property="sender"/>
+        <result column="sender_avatar" property="senderAvatar"/>
+        <result column="priority" property="priority"/>
+        <result column="category" property="category"/>
+        <result column="expire_time" property="expireTime"/>
+        <result column="user_id" property="userId"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <!-- 分页查询通知列表 -->
+    <select id="selectNotificationPage" resultMap="BaseResultMap">
+        SELECT
+            n.*
+        FROM
+            sys_notification n
+        WHERE
+            n.deleted = 0
+            AND n.user_id = #{userId}
+            <if test="isRead != null">
+                AND n.is_read = #{isRead}
+            </if>
+            <if test="category != null and category != ''">
+                AND n.category = #{category}
+            </if>
+            <if test="type != null and type != ''">
+                AND n.type = #{type}
+            </if>
+            <if test="priority != null and priority != ''">
+                AND n.priority = #{priority}
+            </if>
+            <if test="startTime != null">
+                AND n.create_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND n.create_time &lt;= #{endTime}
+            </if>
+        ORDER BY
+            n.create_time DESC
+    </select>
+
+    <!-- 查询未读通知数量 -->
+    <select id="selectUnreadCount" resultType="java.lang.Integer">
+        SELECT
+            COUNT(1)
+        FROM
+            sys_notification n
+        WHERE
+            n.deleted = 0
+            AND n.user_id = #{userId}
+            AND n.is_read = 0
+            AND (n.expire_time IS NULL OR n.expire_time &gt; NOW())
+    </select>
+
+    <!-- 标记通知为已读 -->
+    <update id="markAsRead">
+        UPDATE sys_notification
+        SET is_read = 1
+        WHERE id = #{notificationId}
+            AND user_id = #{userId}
+    </update>
+
+    <!-- 标记所有通知为已读 -->
+    <update id="markAllAsRead">
+        UPDATE sys_notification
+        SET is_read = 1
+        WHERE user_id = #{userId}
+            AND is_read = 0
+    </update>
+
+    <!-- 删除过期的通知 -->
+    <delete id="deleteExpiredNotifications">
+        DELETE FROM sys_notification
+        WHERE expire_time &lt; NOW()
+            AND expire_time IS NOT NULL
+    </delete>
+
+</mapper> 
