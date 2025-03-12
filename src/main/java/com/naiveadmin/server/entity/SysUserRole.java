@@ -1,26 +1,14 @@
 package com.naiveadmin.server.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
-import java.io.Serializable;
-
 /**
- * 用户和角色关联表
+ * 用户角色关联实体类
  */
 @Data
 @TableName("sys_user_role")
-public class SysUserRole implements Serializable {
-    private static final long serialVersionUID = 1L;
-
-    /**
-     * 主键
-     */
-    @TableId(value = "id", type = IdType.AUTO)
-    private Long id;
-
+public class SysUserRole {
     /**
      * 用户ID
      */

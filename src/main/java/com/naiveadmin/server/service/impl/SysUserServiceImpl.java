@@ -5,12 +5,16 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.naiveadmin.server.common.exception.ServiceException;
+import com.naiveadmin.server.entity.SysRole;
 import com.naiveadmin.server.entity.SysUser;
 import com.naiveadmin.server.entity.SysUserRole;
+import com.naiveadmin.server.entity.SysDept;
+import com.naiveadmin.server.mapper.SysRoleMapper;
 import com.naiveadmin.server.mapper.SysUserMapper;
 import com.naiveadmin.server.mapper.SysUserRoleMapper;
 import com.naiveadmin.server.service.IFileService;
 import com.naiveadmin.server.service.ISysUserService;
+import com.naiveadmin.server.service.ISysDeptService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,8 +23,9 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * 用户Service实现类
@@ -30,25 +35,115 @@ import java.util.Objects;
 public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> implements ISysUserService {
 
     private final SysUserRoleMapper userRoleMapper;
+    private final SysRoleMapper roleMapper;
     private final PasswordEncoder passwordEncoder;
     private final IFileService fileService;
+    private final ISysDeptService deptService;
 
     @Override
     public Page<SysUser> listUserPage(IPage<SysUser> page, SysUser user) {
         LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
+        
+        // 用户名或昵称模糊查询
         if (StringUtils.hasText(user.getUsername())) {
             wrapper.like(SysUser::getUsername, user.getUsername())
                     .or()
                     .like(SysUser::getNickname, user.getUsername());
         }
+
+        // 部门查询
+        if (user.getDeptId() != null) {
+            List<Long> deptIds = deptService.getSubDeptIds(user.getDeptId());
+            wrapper.in(SysUser::getDeptId, deptIds);
+        }
+
         wrapper.orderByDesc(SysUser::getCreateTime);
-        return this.page((Page<SysUser>) page, wrapper);
+        Page<SysUser> userPage = this.page((Page<SysUser>) page, wrapper);
+
+        // 设置部门信息
+        userPage.getRecords().forEach(this::setUserDept);
+
+        return userPage;
     }
 
     @Override
     public SysUser getUserByUsername(String username) {
-        return this.getOne(new LambdaQueryWrapper<SysUser>()
+        SysUser user = this.getOne(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUsername, username));
+        
+        if (user != null) {
+            setUserDept(user);
+        }
+        
+        return user;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean assignUserRoles(Long userId, List<Long> roleIds) {
+        // 删除用户原有角色
+        userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>()
+                .eq(SysUserRole::getUserId, userId));
+
+        // 分配新角色
+        if (roleIds != null && !roleIds.isEmpty()) {
+            List<SysUserRole> userRoles = roleIds.stream()
+                    .map(roleId -> {
+                        SysUserRole userRole = new SysUserRole();
+                        userRole.setUserId(userId);
+                        userRole.setRoleId(roleId);
+                        return userRole;
+                    })
+                    .collect(Collectors.toList());
+            
+            // 批量插入用户角色关联
+            for (SysUserRole userRole : userRoles) {
+                userRoleMapper.insert(userRole);
+            }
+        }
+        
+        return true;
+    }
+
+    @Override
+    public List<Long> getUserRoleIds(Long userId) {
+        return userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>()
+                .eq(SysUserRole::getUserId, userId))
+                .stream()
+                .map(SysUserRole::getRoleId)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<String> getUserRoles(Long userId) {
+        List<Long> roleIds = getUserRoleIds(userId);
+        if (roleIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        return roleMapper.selectList(new LambdaQueryWrapper<SysRole>()
+                .in(SysRole::getId, roleIds)
+                .eq(SysRole::getStatus, true))
+                .stream()
+                .map(SysRole::getCode)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<String> getUserPermissions(Long userId) {
+        List<Long> roleIds = getUserRoleIds(userId);
+        if (roleIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        return roleMapper.selectList(new LambdaQueryWrapper<SysRole>()
+                .in(SysRole::getId, roleIds)
+                .eq(SysRole::getStatus, true))
+                .stream()
+                .filter(role -> role.getPermissions() != null)
+                .flatMap(role -> role.getPermissions().stream())
+                .distinct()
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -56,7 +151,15 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     public boolean addUser(SysUser user) {
         // 检查用户名是否已存在
         if (this.getUserByUsername(user.getUsername()) != null) {
-            throw new RuntimeException("用户名已存在");
+            throw new ServiceException("用户名已存在");
+        }
+
+        // 检查部门是否存在
+        if (user.getDeptId() != null) {
+            SysDept dept = deptService.getDeptById(user.getDeptId());
+            if (dept == null) {
+                throw new ServiceException("部门不存在");
+            }
         }
 
         // 设置默认值
@@ -65,23 +168,54 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         user.setUpdateTime(LocalDateTime.now());
         user.setStatus(true); // 默认启用
 
-        return this.save(user);
+        // 保存用户
+        boolean success = this.save(user);
+
+        // 分配角色
+        if (success && user.getRoles() != null && !user.getRoles().isEmpty()) {
+            this.assignUserRoles(user.getId(), user.getRoles());
+        }
+
+        return success;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateUser(SysUser user) {
+        // 检查部门是否存在
+        if (user.getDeptId() != null) {
+            SysDept dept = deptService.getDeptById(user.getDeptId());
+            if (dept == null) {
+                throw new ServiceException("部门不存在");
+            }
+        }
+
         user.setUpdateTime(LocalDateTime.now());
+        
         // 如果密码不为空，则加密
         if (StringUtils.hasText(user.getPassword())) {
             user.setPassword(passwordEncoder.encode(user.getPassword()));
         }
-        return this.updateById(user);
+
+        // 更新用户
+        boolean success = this.updateById(user);
+
+        // 更新角色
+        if (success && user.getRoles() != null) {
+            this.assignUserRoles(user.getId(), user.getRoles());
+        }
+
+        return success;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteUserByIds(List<Long> ids) {
+        // 删除用户角色关联
+        userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>()
+                .in(SysUserRole::getUserId, ids));
+
+        // 删除用户
         return this.removeByIds(ids);
     }
 
@@ -178,5 +312,14 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
                 .eq(SysUser::getEmail, email)
                 .ne(userId != null, SysUser::getId, userId)
                 .eq(SysUser::getDeleted, false)) == 0;
+    }
+
+    /**
+     * 设置用户部门信息
+     */
+    private void setUserDept(SysUser user) {
+        if (user.getDeptId() != null) {
+            user.setDept(deptService.getDeptById(user.getDeptId()));
+        }
     }
 } 

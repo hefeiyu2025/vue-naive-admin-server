@@ -6,44 +6,44 @@ import com.naiveadmin.server.entity.SysDept;
 import java.util.List;
 
 /**
- * 部门Service接口
+ * 部门服务接口
  */
 public interface ISysDeptService extends IService<SysDept> {
 
     /**
      * 获取部门树形列表
      */
-    List<SysDept> getDeptTree(String keyword, Boolean status);
+    List<SysDept> getDeptTree();
 
     /**
      * 获取部门列表
      */
-    List<SysDept> getDeptList(String keyword, Boolean status);
+    List<SysDept> listDepts(SysDept dept);
 
     /**
-     * 获取部门详情
+     * 添加部门
      */
-    SysDept getDeptById(Long id);
-
-    /**
-     * 创建部门
-     */
-    void createDept(SysDept dept);
+    boolean addDept(SysDept dept);
 
     /**
      * 更新部门
      */
-    void updateDept(SysDept dept);
+    boolean updateDept(SysDept dept);
 
     /**
      * 删除部门
      */
-    void deleteDept(Long id);
+    boolean deleteDept(Long id);
 
     /**
-     * 检查部门名称是否唯一
+     * 获取部门及其所有子部门ID
      */
-    boolean checkDeptNameUnique(String name, Long parentId, Long deptId);
+    List<Long> getSubDeptIds(Long deptId);
+
+    /**
+     * 构建部门层级路径
+     */
+    String buildDeptPath(Long parentId);
 
     /**
      * 检查部门编码是否唯一
@@ -51,9 +51,14 @@ public interface ISysDeptService extends IService<SysDept> {
     boolean checkDeptCodeUnique(String code, Long deptId);
 
     /**
-     * 获取部门及其所有子部门ID列表
+     * 检查部门名称是否唯一
      */
-    List<Long> getChildDeptIds(Long deptId);
+    boolean checkDeptNameUnique(String name, Long parentId, Long deptId);
+
+    /**
+     * 获取部门详情
+     */
+    SysDept getDeptById(Long id);
 
     /**
      * 获取用户的数据权限范围（部门ID列表）

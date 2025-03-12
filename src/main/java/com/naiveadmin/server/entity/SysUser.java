@@ -61,7 +61,7 @@ public class SysUser implements Serializable {
     private String bio;
 
     /**
-     * 状态（0-禁用，1-正常）
+     * 状态（0：禁用，1：启用）
      */
     private Boolean status;
 
@@ -81,19 +81,19 @@ public class SysUser implements Serializable {
     private LocalDateTime updateTime;
 
     /**
-     * 是否删除（0-未删除，1-已删除）
+     * 是否删除（0：未删除，1：已删除）
      */
     @TableLogic
     private Boolean deleted;
 
     /**
-     * 角色列表
+     * 角色ID列表
      */
     @TableField(exist = false)
-    private List<SysRole> roles;
+    private List<Long> roles;
 
     /**
-     * 部门
+     * 部门信息
      */
     @TableField(exist = false)
     private SysDept dept;
