@@ -2,6 +2,7 @@ package com.naiveadmin.server.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.naiveadmin.server.entity.SysMenu;
+import com.naiveadmin.server.common.Result;
 
 import java.util.List;
 
@@ -69,4 +70,24 @@ public interface ISysMenuService extends IService<SysMenu> {
      * 获取用户权限列表
      */
     List<String> getUserPermissions(Long userId);
+
+    /**
+     * 获取菜单详情
+     */
+    Result getDetail(Long id);
+
+    /**
+     * 创建菜单
+     */
+    Result create(SysMenu menu);
+
+    /**
+     * 更新菜单
+     */
+    Result update(SysMenu menu);
+
+    /**
+     * 删除菜单
+     */
+    Result delete(Long id);
 } 

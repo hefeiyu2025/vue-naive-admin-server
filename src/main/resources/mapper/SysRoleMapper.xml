@@ -109,4 +109,16 @@
             </foreach>
         </if>
     </delete>
+
+    <!-- 根据用户ID查询角色列表 -->
+    <select id="selectRolesByUserId" resultMap="BaseResultMap">
+        SELECT r.* FROM sys_role r 
+        INNER JOIN sys_user_role ur ON r.id = ur.role_id 
+        WHERE ur.user_id = #{userId} AND r.deleted = 0 AND r.status = 1
+    </select>
+    
+    <!-- 统计使用该角色的用户数量 -->
+    <select id="countUserByRoleId" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM sys_user_role WHERE role_id = #{roleId}
+    </select>
 </mapper> 

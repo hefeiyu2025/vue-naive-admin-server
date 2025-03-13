@@ -2,13 +2,16 @@ package com.naiveadmin.server.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.naiveadmin.server.entity.SysMenu;
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
 /**
  * 菜单Mapper接口
  */
+@Mapper
 public interface SysMenuMapper extends BaseMapper<SysMenu> {
 
     /**

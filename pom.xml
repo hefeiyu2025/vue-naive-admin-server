@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -10,9 +10,9 @@
     </parent>
     <groupId>com.naiveadmin</groupId>
     <artifactId>vue-naive-admin-server</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>vue-naive-admin-server</name>
-    <description>Backend server for Vue Naive Admin</description>
+    <description>Vue Naive Admin Server</description>
     
     <properties>
         <java.version>17</java.version>
@@ -20,11 +20,10 @@
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <mybatis-plus.version>3.5.10.1</mybatis-plus.version>
-        <jjwt.version>0.11.5</jjwt.version>
+        <jwt.version>0.11.5</jwt.version>
         <hutool.version>5.8.23</hutool.version>
-        <druid.version>1.2.20</druid.version>
-        <knife4j.version>4.3.0</knife4j.version>
         <caffeine.version>3.1.8</caffeine.version>
+        <springdoc.version>2.3.0</springdoc.version>
     </properties>
     
     <dependencies>
@@ -75,29 +74,22 @@
             <scope>runtime</scope>
         </dependency>
         
-        <!-- Druid -->
-        <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>druid-spring-boot-starter</artifactId>
-            <version>${druid.version}</version>
-        </dependency>
-        
         <!-- JWT -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
-            <version>${jjwt.version}</version>
+            <version>${jwt.version}</version>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
-            <version>${jjwt.version}</version>
+            <version>${jwt.version}</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
-            <version>${jjwt.version}</version>
+            <version>${jwt.version}</version>
             <scope>runtime</scope>
         </dependency>
         
@@ -115,11 +107,11 @@
             <optional>true</optional>
         </dependency>
         
-        <!-- Knife4j API文档 -->
+        <!-- API Documentation -->
         <dependency>
-            <groupId>com.github.xiaoymin</groupId>
-            <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
-            <version>${knife4j.version}</version>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc.version}</version>
         </dependency>
         
         <!-- Test -->

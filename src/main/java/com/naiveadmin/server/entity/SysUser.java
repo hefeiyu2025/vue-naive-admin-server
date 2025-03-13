@@ -90,7 +90,7 @@ public class SysUser implements Serializable {
      * 角色ID列表
      */
     @TableField(exist = false)
-    private List<Long> roles;
+    private List<SysRole> roles;
 
     /**
      * 部门信息

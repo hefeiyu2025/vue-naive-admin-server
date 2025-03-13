@@ -1,7 +1,7 @@
 package com.naiveadmin.server.security.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.naiveadmin.server.common.api.R;
+import com.naiveadmin.server.common.Result;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.MediaType;
@@ -34,6 +34,6 @@ public class AccessDeniedHandlerImpl implements AccessDeniedHandler {
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         
         // 将错误信息写入响应
-        response.getWriter().write(objectMapper.writeValueAsString(R.forbidden()));
+        response.getWriter().write(objectMapper.writeValueAsString(Result.forbidden()));
     }
 } 

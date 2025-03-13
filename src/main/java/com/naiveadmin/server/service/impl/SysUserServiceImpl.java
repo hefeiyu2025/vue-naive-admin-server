@@ -9,6 +9,7 @@ import com.naiveadmin.server.entity.SysRole;
 import com.naiveadmin.server.entity.SysUser;
 import com.naiveadmin.server.entity.SysUserRole;
 import com.naiveadmin.server.entity.SysDept;
+import com.naiveadmin.server.entity.SysPermission;
 import com.naiveadmin.server.mapper.SysRoleMapper;
 import com.naiveadmin.server.mapper.SysUserMapper;
 import com.naiveadmin.server.mapper.SysUserRoleMapper;
@@ -142,6 +143,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
                 .stream()
                 .filter(role -> role.getPermissions() != null)
                 .flatMap(role -> role.getPermissions().stream())
+                .map(SysPermission::getName)
                 .distinct()
                 .collect(Collectors.toList());
     }
@@ -173,7 +175,10 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
         // 分配角色
         if (success && user.getRoles() != null && !user.getRoles().isEmpty()) {
-            this.assignUserRoles(user.getId(), user.getRoles());
+            List<Long> roleIds = user.getRoles().stream()
+                    .map(SysRole::getId)
+                    .collect(Collectors.toList());
+            this.assignUserRoles(user.getId(), roleIds);
         }
 
         return success;
@@ -202,7 +207,10 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
         // 更新角色
         if (success && user.getRoles() != null) {
-            this.assignUserRoles(user.getId(), user.getRoles());
+            List<Long> roleIds = user.getRoles().stream()
+                    .map(SysRole::getId)
+                    .collect(Collectors.toList());
+            this.assignUserRoles(user.getId(), roleIds);
         }
 
         return success;

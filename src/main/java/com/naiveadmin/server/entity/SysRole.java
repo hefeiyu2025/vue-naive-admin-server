@@ -1,10 +1,7 @@
 package com.naiveadmin.server.entity;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableLogic;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -17,6 +14,7 @@ public class SysRole {
     /**
      * 角色ID
      */
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     /**
@@ -30,19 +28,20 @@ public class SysRole {
     private String code;
 
     /**
+     * 排序号
+     */
+    private Integer sort;
+
+    /**
      * 角色状态（0：禁用，1：启用）
      */
     private Boolean status;
 
     /**
-     * 排序号
+     * 是否删除（0：未删除，1：已删除）
      */
-    private Integer orderNum;
-
-    /**
-     * 备注
-     */
-    private String remark;
+    @TableLogic
+    private Boolean deleted;
 
     /**
      * 创建时间
@@ -55,14 +54,8 @@ public class SysRole {
     private LocalDateTime updateTime;
 
     /**
-     * 是否删除（0：未删除，1：已删除）
-     */
-    @TableLogic
-    private Boolean deleted;
-
-    /**
      * 权限列表
      */
     @TableField(exist = false)
-    private List<String> permissions;
+    private List<SysPermission> permissions;
 } 

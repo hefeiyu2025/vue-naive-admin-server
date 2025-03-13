@@ -3,6 +3,7 @@ package com.naiveadmin.server.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.naiveadmin.server.entity.SysRole;
+import com.naiveadmin.server.common.Result;
 
 import java.util.List;
 
@@ -60,4 +61,39 @@ public interface ISysRoleService extends IService<SysRole> {
      * 检查角色编码是否唯一
      */
     boolean checkRoleCodeUnique(String code, Long roleId);
+
+    /**
+     * 获取角色列表
+     */
+    Result getList(String keyword, Boolean status, Integer page, Integer pageSize);
+
+    /**
+     * 获取角色详情
+     */
+    Result getDetail(Long id);
+
+    /**
+     * 创建角色
+     */
+    Result create(SysRole role);
+
+    /**
+     * 更新角色
+     */
+    Result update(SysRole role);
+
+    /**
+     * 删除角色
+     */
+    Result delete(Long id);
+
+    /**
+     * 分配角色权限
+     */
+    Result assignPermissions(Long roleId, List<Long> permissionIds);
+
+    /**
+     * 获取角色权限
+     */
+    Result getRolePermissions(Long roleId);
 } 
